@@ -25,6 +25,17 @@ module brace() {
                         [-brace_notch_keep, brace_notch_y0]
                     ]);
 
+        // 親指キー張り出しの回避(南ネジと中央ネジの間、エッジを少し中央寄りに)
+        for (m = [0, 1]) mirror([m, 0, 0])
+            translate([0, 0, -1]) linear_extrude(brace_t + 2)
+                offset(r = 4) offset(delta = -4)
+                    polygon([
+                        [-200,                                    brace_thumb_y0],
+                        [-200,                                    brace_thumb_y1],
+                        [-(seam_x(brace_thumb_y1) - brace_thumb_inset), brace_thumb_y1],
+                        [-(seam_x(brace_thumb_y0) - brace_thumb_inset), brace_thumb_y0]
+                    ]);
+
         // 固定ネジ(皿, 上から)
         for (sx = [-1, 1], y = brace_screw_ys)
             translate([sx * (seam_x(y) + brace_screw_inset), y, brace_t])

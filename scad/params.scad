@@ -78,6 +78,10 @@ brace_shelf_z = 22.2;  // サイド側座面の高さ(バッテリー版ポッ�
 brace_shelf_w = 10;    // 座面幅(継ぎ目から内側へ)
 brace_overlap = 8;     // プレートが座面に乗る幅
 brace_screw_ys = [108, 154, 221];  // 固定ネジY(片側3本)
+// 親指キークラスタの張り出し回避: 南ネジと中央ネジの間のエッジを少し中央寄りに後退
+brace_thumb_y0    = 114;  // 回避Y範囲
+brace_thumb_y1    = 147;
+brace_thumb_inset = 12;   // 継ぎ目から中央側への後退量
 brace_screw_inset = 5;        // 継ぎ目からネジ中心までの距離
 
 // M3 (継手・ポッド固定)
