@@ -35,8 +35,8 @@ module kb_block() {
         // ボールPCB切り欠き部の逃げ(プレート外形の外側のみ、床からさらに掘り下げ)
         difference() {
             intersection() {
-                translate([kb_wall + 86, -1, -1])
-                    cube([kbw - kb_wall - 86 + 2, kb_wall + 44, 80]);
+                translate([kb_wall + 91, -1, -1])
+                    cube([kbw - kb_wall - 91 + 2, kb_wall + 47, 80]);
                 halfspace_above_top(-pocket_depth - notch_relief);
             }
             translate([kb_wall, kb_wall, -2]) linear_extrude(84) plate2d(0);
@@ -46,12 +46,12 @@ module kb_block() {
         for (h = plate_holes_f) {
             hx = kb_wall + h[0];
             hy = kb_wall + h[1];
-            if (h[2] > 1.9 && h[2] < 2.2) {
+            if (h[2] > 1.9 && h[2] < 2.35) {
                 // M2: スペーサーへ下からネジ止め。残り肉厚 = アクリル板厚(2.0)
                 translate([hx, hy, -1]) cylinder(d = m2_hole_d, h = 80);
                 translate([hx, hy, -1]) cylinder(d = m2_cb_d, h = 1 + pocket_floor_z(hx) - m2_remain);
             }
-            if (h[2] >= 2.2 && h[2] < 4) {
+            if (h[2] >= 2.35 && h[2] < 4) {
                 // ボールケース固定: 純正セルフタップが白ケースに届く残り肉厚
                 translate([hx, hy, -1]) cylinder(d = bc_hole_d, h = 80);
                 translate([hx, hy, -1]) cylinder(d = bc_cb_d, h = 1 + pocket_floor_z(hx) - m2_remain);

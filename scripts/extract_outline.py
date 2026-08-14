@@ -2,9 +2,10 @@
 """Keyball61 の底板アクリル DXF から外形と穴位置を抽出し、
 data/keyball61_ballside_bottom_real.json と scad/keyball61_outline.scad を生成する。
 
-DXF は 3:1 スケールで描かれているため 1/3 して実寸(mm)にする。
-（検証: MiddleAcryl(1:1) のプレート 105.9x132.3 に対し Bottom は 404.6x321.2 ≒ 3倍・90度回転、
- スイッチ穴 13.8mm・M2 穴 6.23/3=2.08mm も整合）
+DXF はポイント単位(≒1/72inch)で描かれている。スケール係数は公式KiCad基板(右手・Ball側)の
+スペーサー穴8点と底板M2穴8点の相似変換フィット(残差0.002mm)から 0.353407 mm/unit と確定。
+プレート実寸 142.99 x 113.53 mm は PCB の Edge.Cuts 外形 142.9 x 113.5 とも一致する。
+(当初「3:1スケール」と誤推定していた: 実寸比 1pt=0.35278 に対し 1/3=0.3333 で約6%小さかった)
 
 使い方:
   python3 scripts/extract_outline.py path/to/Keyball61_Rev1_BallSide_Bottom_Acryl_Clear2mm.dxf
@@ -19,7 +20,7 @@ from pathlib import Path
 import ezdxf
 from ezdxf.disassemble import recursive_decompose
 
-SCALE = 1.0 / 3.0
+SCALE = 0.353407  # mm/unit (KiCad基板との照合で確定)
 TOL = 0.06  # 端点連結の許容距離 (DXF座標系)
 
 REPO = Path(__file__).resolve().parent.parent
