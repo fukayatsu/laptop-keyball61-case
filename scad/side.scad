@@ -119,10 +119,10 @@ module side_left() {
         // ブレースプレート用の座面(内壁上面を水平に彫る)
         translate([0, 0, brace_shelf_z]) linear_extrude(30)
             polygon([
-                [-(seam_x(brace_y0 - 2)) + 2,             brace_y0 - 2],
-                [-(seam_x(brace_y1 + 2)) + 2,             brace_y1 + 2],
-                [-(seam_x(brace_y1 + 2) + brace_shelf_w), brace_y1 + 2],
-                [-(seam_x(brace_y0 - 2) + brace_shelf_w), brace_y0 - 2]
+                [-(seam_x(brace_y0 - 0.5)) + 2,             brace_y0 - 0.5],
+                [-(seam_x(brace_y1 + 0.5)) + 2,             brace_y1 + 0.5],
+                [-(seam_x(brace_y1 + 0.5) + brace_shelf_w), brace_y1 + 0.5],
+                [-(seam_x(brace_y0 - 0.5) + brace_shelf_w), brace_y0 - 0.5]
             ]);
 
         // ブレース固定ネジの下穴(M3セルフタップ)
