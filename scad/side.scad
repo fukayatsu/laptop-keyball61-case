@@ -45,15 +45,32 @@ module kb_block() {
             halfspace_above_top(-pocket_depth);
         }
 
-        // ボールPCB切り欠き部の逃げ(プレート外形の外側のみ、床からさらに掘り下げ)
+        // ボールケースネジ周囲の座も取付面と同じ高さに彫る
+        // (外形線ぎわのネジの座を南側へ張り出させる)
+        for (h = plate_holes_f)
+            if (h[2] >= 2.35 && h[2] < 4)
+                intersection() {
+                    translate([kb_wall + h[0], kb_wall + h[1], -1]) cylinder(d = 14, h = 80);
+                    halfspace_above_top(-pocket_depth);
+                }
+
+        // 前方バンドの逃げ(プレート外形の外側のみ、床からさらに掘り下げ)
+        // トラックボールケースとボールPCBがプレート外形からはみ出すため、
+        // ボール周辺(プレートx=40)から東へ一段(notch_relief)低くする。
         // 東端はプレート外形まで: 内壁と継ぎ目帯(ブレース座面が載る)は削らない
         difference() {
             intersection() {
-                translate([kb_wall + 91, -1, -1])
-                    cube([plate_w - 91 + 0.5, kb_wall + 47, 80]);
+                translate([kb_wall + 40, -1, -1])
+                    cube([plate_w - 40 + 0.5, kb_wall + 47, 80]);
                 halfspace_above_top(-pocket_depth - notch_relief);
             }
             translate([kb_wall, kb_wall, -2]) linear_extrude(84) plate2d(0);
+            // ボールケースネジの座ぐり周囲は取付面レベルの座を残す
+            // (外形線ぎわのネジでも座ぐりが欠けず、ケースの足の支持にもなる)
+            for (h = plate_holes_f)
+                if (h[2] >= 2.35 && h[2] < 4)
+                    translate([kb_wall + h[0], kb_wall + h[1], -2])
+                        cylinder(d = 14, h = 84);
         }
 
         // 固定穴・ボール取出し穴 (plate_holes_f は前後反転済み)
