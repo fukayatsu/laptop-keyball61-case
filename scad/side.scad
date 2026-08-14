@@ -5,15 +5,28 @@
 // ハの字 splay 回転してグローバル座標に配置する。右は左のミラー。
 include <lib.scad>
 
-// パームレストのオフセット(kbフレーム)。kbw より狭くして内側エッジを直線に保つ
-palm_x0 = (kbw - palm_w) / 2;
+// パームレストのオフセット(kbフレーム)
 palm_y0 = -(palm_d - palm_overlap);
 
 // ---- フットプリント(kbフレーム) ----
+// パームは外側(x=palm_x0)基準で幅 palm_w。親指側(内側)は大きく開ける。
+// ただしブレース南帯の座面・ネジ座が載る内側エッジ沿いは支持アームを残す
 module kb_footprint2d() {
-    hull() {
-        rounded_rect(kbw, kbd, 6);
-        translate([palm_x0, palm_y0]) rounded_rect(palm_w, palm_d, palm_r);
+    // クロージング(R=palm_fillet)でアーム両脇の鋭い凹みを滑らかな曲線で埋め、
+    // オープニング(R=2)で凸角の尖りを丸める。直線エッジ(継ぎ目)は変化しない
+    offset(r = 2) offset(r = -(palm_fillet + 2)) offset(r = palm_fillet)
+    union() {
+        hull() {
+            rounded_rect(kbw, kbd, 6);
+            translate([palm_x0, palm_y0]) rounded_rect(palm_w, palm_d, palm_r);
+        }
+        // 内側エッジ沿いの支持アーム(南端は斜めに落とす)
+        polygon([
+            [kbw - palm_arm_w, 4],
+            [kbw, 4],
+            [kbw, palm_arm_y0],
+            [kbw - palm_arm_w, palm_arm_y0 + 12]
+        ]);
     }
 }
 
@@ -33,10 +46,11 @@ module kb_block() {
         }
 
         // ボールPCB切り欠き部の逃げ(プレート外形の外側のみ、床からさらに掘り下げ)
+        // 東端はプレート外形まで: 内壁と継ぎ目帯(ブレース座面が載る)は削らない
         difference() {
             intersection() {
                 translate([kb_wall + 91, -1, -1])
-                    cube([kbw - kb_wall - 91 + 2, kb_wall + 47, 80]);
+                    cube([plate_w - 91 + 0.5, kb_wall + 47, 80]);
                 halfspace_above_top(-pocket_depth - notch_relief);
             }
             translate([kb_wall, kb_wall, -2]) linear_extrude(84) plate2d(0);
