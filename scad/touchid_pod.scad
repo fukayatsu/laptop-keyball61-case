@@ -3,9 +3,8 @@
 //
 // 構成: tray(本体) + lid(蓋)。
 //  - 蓋ネジボスは壁に埋め込んだ台形ガセット付きで補強(対角2箇所, M3x8皿セルフタップ)
-//  - 北側に TRS ケーブルギャラリー(蓋付き配線溝, 東西貫通)。左右キーボード間の
-//    TRS ケーブル中央部をポッド内に隠し、余長も収納できる
-//  - トレイはブリッジへ M3x12なべ + ナット(ブリッジ下面ポケット) x2 で固定
+//  - トレイはブリッジへ M3x8皿セルフタップ x2 で固定
+//  - ケーブル(ボタン延長等)は北壁のスリット(幅15)から引き出す
 // 原点 = ベイ中心(XY), z=0 = 底面
 include <lib.scad>
 
@@ -17,7 +16,6 @@ pod_flange_t = 4;
 pod_flange_ext = 12;
 pod_boss_d = 10;                           // 蓋ネジボス径
 pod_boss_y = 30;                           // ボス中心の前後オフセット
-gal_d_out = gal_ch + gal_wall;             // ギャラリーの北への張り出し
 
 // ボス中心位置 [x, y] (北東と南西の対角, 壁に3mm食い込ませて一体化)
 function boss_pos() = [
@@ -25,10 +23,10 @@ function boss_pos() = [
     [-(pod_core_w/2 + pod_boss_d/2 - 3), -pod_boss_y]
 ];
 
-// トレイ天面/蓋の共通フットプリント: コア + ギャラリー + ボスローブ(ガセット)
+// トレイ天面/蓋の共通フットプリント: コア + ボスローブ(ガセット)
 module pod_fp2d() {
     translate([-pod_core_w/2, -pod_core_d/2])
-        square([pod_core_w, pod_core_d + gal_d_out]);
+        square([pod_core_w, pod_core_d]);
     for (p = boss_pos())
         hull() {
             translate(p) circle(d = pod_boss_d);
@@ -60,16 +58,16 @@ module pod_tray() {
             translate([sx * (tid_bay_w/2 - 2.5), 15, pod_floor_t])
                 cylinder(d = 9, h = 50);
 
-        // TRSケーブルギャラリー(東西貫通, 蓋がカバーになる)
-        translate([-pod_core_w/2 - 20, pod_core_d/2, gal_floor])
-            cube([pod_core_w + 40, gal_ch, 50]);
+        // ケーブル引き出しスリット(北壁, 幅15。ボタン延長ケーブル等の出口)
+        translate([-7.5, tid_bay_d/2 - 1, pod_floor_t])
+            cube([15, tid_wall + 2, 50]);
 
-        // 充電ポート開口(南面) tid_port_w=0 で無効
-        // バッテリー版は基板が電池の上に載る分だけ開口も上がる
+        // 充電ポート開口(南面, 上開きのU字スロット。蓋がカバーになる) tid_port_w=0 で無効
+        // バッテリー版は基板が電池の上に載る分だけ下端も上がる
         if (tid_port_w > 0)
-            translate([tid_port_off - tid_port_w/2, -pod_core_d/2 - 10,
+            translate([tid_port_off - tid_port_w/2, -pod_core_d/2 - 2,
                        pod_floor_t + (tid_battery ? tid_bat_t : 0)])
-                cube([tid_port_w, 11, tid_port_h]);
+                cube([tid_port_w, tid_wall + 4, 50]);
 
         // 蓋ネジ下穴(M3セルフタップ)
         for (p = boss_pos())
