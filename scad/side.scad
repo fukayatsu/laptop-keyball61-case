@@ -47,10 +47,12 @@ module kb_block() {
 
         // ボールケースネジ周囲の座も取付面と同じ高さに彫る
         // (外形線ぎわのネジの座を南側へ張り出させる)
+        // ※プレートは7°斜面に載るため、特徴のx位置は cos(tent_angle) 投影で配置
         for (h = plate_holes_f)
             if (h[2] >= 2.35 && h[2] < 4)
                 intersection() {
-                    translate([kb_wall + h[0], kb_wall + h[1], -1]) cylinder(d = 14, h = 80);
+                    translate([kb_wall + h[0]*cos(tent_angle), kb_wall + h[1], -1])
+                        cylinder(d = 14, h = 80);
                     halfspace_above_top(-pocket_depth);
                 }
 
@@ -69,28 +71,27 @@ module kb_block() {
             // (外形線ぎわのネジでも座ぐりが欠けず、ケースの足の支持にもなる)
             for (h = plate_holes_f)
                 if (h[2] >= 2.35 && h[2] < 4)
-                    translate([kb_wall + h[0], kb_wall + h[1], -2])
+                    translate([kb_wall + h[0]*cos(tent_angle), kb_wall + h[1], -2])
                         cylinder(d = 14, h = 84);
         }
 
-        // 固定穴・ボール取出し穴 (plate_holes_f は前後反転済み)
+        // ネジ頭の逃げ穴・ボール取出し穴 (plate_holes_f は前後反転済み)
+        // キーボードはマウントプレート側に固定済みなので、サイドは
+        // ネジ頭(プレート下面に突出)の逃げΦ8貫通穴だけでよい(精度不要)
         for (h = plate_holes_f) {
-            hx = kb_wall + h[0];
+            hx = kb_wall + h[0] * cos(tent_angle);
             hy = kb_wall + h[1];
-            if (h[2] > 1.9 && h[2] < 2.35) {
-                // M2: スペーサーへ下からネジ止め。残り肉厚 = アクリル板厚(2.0)
-                translate([hx, hy, -1]) cylinder(d = m2_hole_d, h = 80);
-                translate([hx, hy, -1]) cylinder(d = m2_cb_d, h = 1 + pocket_floor_z(hx) - m2_remain);
-            }
-            if (h[2] >= 2.35 && h[2] < 4) {
-                // ボールケース固定: 純正セルフタップが白ケースに届く残り肉厚
-                translate([hx, hy, -1]) cylinder(d = bc_hole_d, h = 80);
-                translate([hx, hy, -1]) cylinder(d = bc_cb_d, h = 1 + pocket_floor_z(hx) - m2_remain);
-            }
-            if (h[2] > 10) {
-                // ボール取出し穴
+            if (h[2] > 1.9 && h[2] < 4)
+                translate([hx, hy, -1]) cylinder(d = kb_head_hole_d, h = 80);
+            if (h[2] > 10)
                 translate([hx, hy, -1]) cylinder(d = ball_hole_d, h = 80);
-            }
+        }
+
+        // マウントプレート固定ネジの下穴(M3セルフタップ, ポケット床から)
+        for (sp = plate_screws) {
+            sx = kb_wall + sp[0] * cos(tent_angle);
+            sy = kb_wall + sp[1];
+            translate([sx, sy, pocket_floor_z(sx) - 7]) cylinder(d = 2.6, h = 8);
         }
     }
 }

@@ -1,5 +1,5 @@
 OPENSCAD ?= /opt/homebrew/bin/openscad
-PARTS = side_left side_right bridge brace touchid_pod
+PARTS = side_left side_right bridge brace plate_left plate_right touchid_pod
 
 all: $(PARTS:%=stl/%.stl) stl/touchid_pod_battery.stl
 
