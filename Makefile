@@ -18,12 +18,23 @@ v3: $(V3_PARTS:%=stl/%.stl)
 stl/v3_%.stl: scad/v3/parts_v3_%.scad scad/v3/*.scad scad/*.scad
 	$(OPENSCAD) -o $@ $<
 
-# v3 STLの設計検証(要: pip install trimesh numpy)
+# v4 平面構造(2mmプレート+切妻中央箱)
+V4_PARTS = v4_plate_left v4_plate_right v4_center_spine v4_center_cover
+
+v4: $(V4_PARTS:%=stl/%.stl)
+
+stl/v4_%.stl: scad/v4/parts_v4_%.scad scad/v4/*.scad scad/*.scad
+	$(OPENSCAD) -o $@ $<
+
+# v3/v4 STLの設計検証(要: pip install trimesh numpy)
 PYTHON ?= python3
 check: v3
 	$(PYTHON) scripts/verify_v3.py
 
-.PHONY: v3 check
+check-v4: v4
+	$(PYTHON) scripts/verify_v4.py
+
+.PHONY: v3 v4 check check-v4
 
 images:
 	$(OPENSCAD) -o docs/images/assembly_top.png --imgsize 1600,800 --camera 0,110,0,0,0,0,560 --projection o scad/assembly.scad
