@@ -9,9 +9,6 @@ include <../lib.scad>
 v4_pt     = 2;      // プレート厚
 v4_fit    = 0.15;   // プレート下面とスパイン上面のクリアランス
 v4_spine_z0 = 13.5; // スパイン底面の高さ(フラット。接地せず浮く)
-v4_rim_t  = 2.5;    // キーボードフェンス厚
-v4_rim_h  = 6;      // 同高さ(プレート上面から)
-
 // 左右間隔(v3と同じ短縮値)
 v4_corner_x = kb_corner_x - 25;
 function v4_seam(y) = v4_corner_x + (kb_corner_y - y) * tan(splay);

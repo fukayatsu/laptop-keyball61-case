@@ -1,6 +1,5 @@
 // v4 サイドプレート: キーボード搭載部+パームレスト+中央張り出しの一体2mm平板。
-// 完全な平面(下面フラット)でベッドにベタ置き印刷。キーボードフェンス(6mm)が
-// 上に立つだけなのでサポート不要。
+// 完全な平面でベッドにベタ置き印刷(サポート不要)。フェンス等の立体はなし。
 // 組立時は 外側エッジが接地・内側が7°持ち上がる(テント角は中央箱の屋根が作る)。
 //
 // ローカル座標 = 斜面沿いの実寸(sx = kbローカルx / cos(tent), sy = kbローカルy)。
@@ -25,24 +24,9 @@ module v4_plate_fp2d() {
 
 module v4_plate_left() {
     difference() {
-        union() {
-            // 平板
-            linear_extrude(v4_pt) v4_plate_fp2d();
-            // キーボードフェンス(外形+0.5..+3の帯のうち、西/北/南の一部)
-            translate([v4p_ox, v4p_oy, 0]) linear_extrude(v4_pt + v4_rim_h)
-                intersection() {
-                    difference() {
-                        offset(r = 0.5 + v4_rim_t) plate2d(0);
-                        offset(r = 0.5) plate2d(0);
-                    }
-                    union() {
-                        translate([-10, -10]) square([16, plate_d + 20]);      // 西
-                        translate([-10, plate_d - 8]) square([65, 20]);        // 北西(MCU/USB回避)
-                        translate([120, plate_d - 8]) square([40, 20]);        // 北東
-                        translate([-10, -10]) square([50, 18]);                // 南西
-                    }
-                }
-        }
+        // 平板のみ(キーボードフェンスは廃止: 位置決めはネジで足り、
+        // 剛性も基板+スペーサーが担うためユーザー判断で削除)
+        linear_extrude(v4_pt) v4_plate_fp2d();
 
         // キーボード取付穴
         translate([v4p_ox, v4p_oy, 0]) {
@@ -66,6 +50,12 @@ module v4_plate_left() {
         // 中央ジョイント穴(縦M3なべ用ストレート穴, 屋根フランジのネジ軸位置)
         for (jy = v4_cj_ys)
             translate([v4sx(kbw + 6), v4_jyl(jy), -1]) cylinder(d = 3.4, h = 20);
+
+        // ケーブルまとめ用スロット(3x15, 角丸)。外側後方の角
+        // (左サイドの左上/右サイドの右上)。ストラップは穴と縁の間を通す。
+        // キーボード外形はこの付近 sy<108 までしか来ない
+        hull() for (sx = [5.5, 17.5])
+            translate([sx, 120.5, -1]) cylinder(d = 3, h = v4_pt + 2);
     }
 }
 
