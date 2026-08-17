@@ -11,7 +11,7 @@ stl/touchid_pod_battery.stl: scad/parts_touchid_pod.scad scad/*.scad
 	$(OPENSCAD) -D tid_battery=true -o $@ $<
 
 # v3 モジュラー構造(検討中の別案)
-V3_PARTS = v3_kb_box_left v3_kb_box_right v3_palm_box_left v3_palm_box_right v3_center_box v3_center_lid
+V3_PARTS = v3_kb_box_left v3_kb_box_right v3_palm_box_left v3_palm_box_right v3_center_box v3_center_lid v3_plate_left v3_plate_right v3_pod
 
 v3: $(V3_PARTS:%=stl/%.stl)
 

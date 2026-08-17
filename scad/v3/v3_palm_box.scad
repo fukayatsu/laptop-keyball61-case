@@ -1,14 +1,19 @@
 // v3 パームボックス: 差し替え式の楔シェル(リブなし・底面開放)。
 // 「天面をベッドに伏せて」印刷すればブリッジゼロ(partsファイルで180°±tent回転済み)。
-// 北端: 天板と面一のタブx3(厚3.2, 上面=楔面=印刷時のベッド接地面)が
-// KBフレーム南壁の切り欠きに載り、
-// 上から縦M3x8なべ→KB側ボスの横挿しナットスロットで締結(皿もみなしの
-// ストレート穴。薄タブの縁を残して座面強度を確保)。頭はジェルパッドの下。
-// kbフレーム基準(北端 y=0, タブは y>0 へ張り出す)。
+// 北端: 天板と面一の長耳1枚(厚2.5, 穴3, 上面=楔面=印刷時のベッド接地面)が
+// KBフレーム南壁の切り欠きに載り、上から縦M3x8なべ→KB側ボス帯の
+// 横挿しナットスロットで締結。頭はジェルパッドの下。
+// 耳はボール部品の張り出し帯(kb x>=46)を避けて x<=45.5 に収める。
+// 北東の縁(x>=46)は張り出し部品と接触しないよう1mmセットバック。
+// kbフレーム基準(北端 y=0, 耳は y>0 へ張り出す)。
 include <v3_params.scad>
 
 module v3_palm_fp2d() {
-    translate([v3_palm_x0, -v3_palm_d]) rounded_rect(v3_palm_w, v3_palm_d, palm_r);
+    difference() {
+        translate([v3_palm_x0, -v3_palm_d]) rounded_rect(v3_palm_w, v3_palm_d, palm_r);
+        // 張り出し帯に面する北縁のセットバック
+        translate([46, -1]) square([v3_palm_w, 1.01]);
+    }
 }
 
 module v3_palm_box_left() {
@@ -21,21 +26,19 @@ module v3_palm_box_left() {
                     halfspace_below_top(0);
                 }
                 intersection() {
-                    translate([0, 0, -1]) linear_extrude(62) offset(delta = -v3_wall) v3_palm_fp2d();
+                    translate([0, 0, -1]) linear_extrude(62)
+                        offset(delta = -v3_wall) v3_palm_fp2d();
                     halfspace_below_top(-v3_top);
                 }
             }
-            // ジョイントタブ(楔面-3.2 .. 0 のスラブ。北端はネジ穴縁の肉1.5mmを確保)
-            // 上面は天板と完全に面一: 伏せ印刷でタブも1層目からベッドに接する
-            // (0.2下げるとタブだけ浮いて1層目が欠ける)
-            for (jx = v3_pj_xs)
-                intersection() {
-                    translate([jx - 7, -3, 0]) cube([14, 10.7, 60]);
-                    halfspace_below_top(0);
-                    halfspace_above_top(-3.2);
-                }
+            // ジョイント長耳(楔面-2.5 .. 0 のスラブ, 上面=天板と完全面一)
+            intersection() {
+                translate([15, -3, 0]) cube([45.5 - 15, 10.7, 60]);
+                halfspace_below_top(0);
+                halfspace_above_top(-v3_pj_tab_t);
+            }
         }
-        // タブのネジ穴(縦M3なべ用ストレート穴, KB側ボスのネジ穴位置 y=4.5)
+        // 耳のネジ穴(縦M3なべ用ストレート穴, KB側ボスのネジ穴位置 y=4.5)
         for (jx = v3_pj_xs)
             translate([jx, 4.5, kb_top_z(jx) - 4.5]) cylinder(d = 3.4, h = 6);
     }
