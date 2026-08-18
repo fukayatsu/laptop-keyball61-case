@@ -24,9 +24,22 @@ module v4_plate_fp2d() {
 
 module v4_plate_left() {
     difference() {
-        // 平板のみ(キーボードフェンスは廃止: 位置決めはネジで足り、
-        // 剛性も基板+スペーサーが担うためユーザー判断で削除)
-        linear_extrude(v4_pt) v4_plate_fp2d();
+        union() {
+            // 平板(キーボードフェンスは廃止: 位置決めはネジで足り、
+            // 剛性も基板+スペーサーが担うためユーザー判断で削除)
+            linear_extrude(v4_pt) v4_plate_fp2d();
+            // たわみ抑えリブ(上面)。水平1本+外側エッジ沿いの縦1本(西端で合流)。
+            // ジェルパッド80x95の領域を避けつつ位置決めストッパー兼用。
+            // 外形の2mm内側にクリップ
+            intersection() {
+                translate([0, 0, v4_pt - 0.01]) linear_extrude(v4_rib_h + 0.01)
+                    for (rib = v4_ribs, i = [0 : len(rib) - 2]) hull() {
+                        translate(rib[i]) circle(d = v4_rib_w);
+                        translate(rib[i + 1]) circle(d = v4_rib_w);
+                    }
+                linear_extrude(30) offset(delta = -2) v4_plate_fp2d();
+            }
+        }
 
         // キーボード取付穴
         translate([v4p_ox, v4p_oy, 0]) {
@@ -51,11 +64,14 @@ module v4_plate_left() {
         for (jy = v4_cj_ys)
             translate([v4sx(kbw + 6), v4_jyl(jy), -1]) cylinder(d = 3.4, h = 20);
 
-        // ケーブルまとめ用スロット(3x15, 角丸)。外側後方の角
-        // (左サイドの左上/右サイドの右上)。ストラップは穴と縁の間を通す。
-        // キーボード外形はこの付近 sy<108 までしか来ない
-        hull() for (sx = [5.5, 17.5])
-            translate([sx, 120.5, -1]) cylinder(d = 3, h = v4_pt + 2);
+        // ケーブルまとめ用スロット(3x15, 角丸, 北縁沿いに2箇所):
+        //  - 外側後方の角(左サイドの左上/右サイドの右上)。外形はsy<108
+        //  - 親指キー付近の2つのM2穴(sx126.9/134.8)のちょうど真北(ユーザー指定)。
+        //    外形はsy<115
+        // ストラップは穴と縁の間を通す
+        for (xs = [[5.5, 17.5], [125, 137]])
+            hull() for (sx = xs)
+                translate([sx, 120.5, -1]) cylinder(d = 3, h = v4_pt + 2);
     }
 }
 
