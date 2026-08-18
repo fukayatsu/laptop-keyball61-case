@@ -1,2 +1,0 @@
-include <bridge.scad>
-bridge();

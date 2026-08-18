@@ -1,2 +1,0 @@
-include <brace.scad>
-brace();
