@@ -106,13 +106,16 @@ def main():
     print("[3.5] カバー取付ネジ(軸素通し+スパイン下穴)")
     cvg = cv.copy()
     cvg.apply_transform(tr([0, 0, 1.0]))  # 印刷並進を戻す
-    for sx, sy in [[-10, 120], [10, 120], [-10, 218], [10, 218]]:
-        zs = np.arange(2.0, 18.4, 0.4)
+    for sx, sy in [[-24, 120], [24, 120], [-10, 218], [10, 218]]:
+        zs = np.arange(2.0, 18.3, 0.4)
         axis = np.column_stack([np.full_like(zs, sx), np.full_like(zs, sy), zs])
         clear = cvg.contains(axis).sum() == 0 and cbg.contains(axis).sum() == 0
         ring = all(cvg.contains([[sx + dx, sy + dy, 12.0]])[0]
                    for dx, dy in [(4.2, 0), (-4.2, 0), (0, 4.2), (0, -4.2)])
-        check(f"({sx},{sy}): 軸素通し={clear}, ボス材料={ring}", clear and ring)
+        nut_void = not cbg.contains([[sx, sy, 17.2]])[0]  # 六角井戸内
+        seat = cbg.contains([[sx, sy + 4.6, 15.0]])[0]     # 井戸床下の材料
+        check(f"({sx},{sy}): 軸素通し={clear}, ボス材料={ring}, "
+              f"井戸空洞={nut_void}, 床材料={seat}", clear and ring and nut_void and seat)
 
     print("[4] 干渉サンプリング")
     rng = np.random.default_rng(7)

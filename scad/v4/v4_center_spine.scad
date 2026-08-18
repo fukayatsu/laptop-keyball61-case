@@ -58,8 +58,14 @@ module v4_center_spine() {
             }
 
 
-        // 下箱取付ネジの下穴(底面からM3セルフタップ, 深さ5.5。スパイン底面が箱の蓋)
-        for (s = v4_case_screws)
-            translate([s[0], s[1], v4_spine_z0 - 0.01]) cylinder(d = 2.6, h = 5.5);
+        // カバー取付ネジ(セルフタップ廃止): 上面からの六角ナット井戸 + 貫通ボア。
+        // ナットは井戸床(底面+2.5)に座り、カバー側から来るM3x8なべの先端が
+        // ちょうど全ネジ掛かりで届く。井戸は上開きなので印刷も綺麗
+        for (s = v4_case_screws) {
+            translate([s[0], s[1], v4_case_nut_z])
+                cylinder(d = m3_nut_af / cos(30), h = 30, $fn = 6);
+            translate([s[0], s[1], v4_spine_z0 - 1])
+                cylinder(d = m3_hole_d, h = v4_case_nut_z - v4_spine_z0 + 1.1);
+        }
     }
 }
