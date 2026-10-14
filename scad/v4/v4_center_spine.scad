@@ -4,14 +4,9 @@
 //    ベタ置き印刷でき、上面は7°の緩斜面なのでサポートゼロ・安定
 //  - プレートとは縦M3x8なべ x3/側。ナットは底面からの六角ポケット
 //    (ネジ軸方向・回り止め。ナットの上の肉は約3mm)
+//  - 下面カバーは廃止(2026-10-14。Touch ID・TRSは上部カバーへ)したので底面は露出
 // 厚さは端で約5.4mm、稜線で約11mm
 include <v4_params.scad>
-
-// kbローカル -> グローバル(左)。プレートと同じ配置
-module v4_place_left() {
-    translate([-v4_corner_x, kb_corner_y, 0]) rotate([0, 0, -splay])
-        translate([-kbw, -kbd, 0]) children();
-}
 
 // 左プレート下面平面(z = x*tan(tent), kbローカル)より下の半空間
 module v4_below_plateL(dz = 0) {
@@ -56,16 +51,5 @@ module v4_center_spine() {
                             cylinder(d1 = m3_nut_af / cos(30), d2 = 4, h = 1.4, $fn = 6);
                     }
             }
-
-
-        // カバー取付ネジ(セルフタップ廃止): 上面からの六角ナット井戸 + 貫通ボア。
-        // ナットは井戸床(底面+2.5)に座り、カバー側から来るM3x8なべの先端が
-        // ちょうど全ネジ掛かりで届く。井戸は上開きなので印刷も綺麗
-        for (s = v4_case_screws) {
-            translate([s[0], s[1], v4_case_nut_z])
-                cylinder(d = m3_nut_af / cos(30), h = 30, $fn = 6);
-            translate([s[0], s[1], v4_spine_z0 - 1])
-                cylinder(d = m3_hole_d, h = v4_case_nut_z - v4_spine_z0 + 1.1);
-        }
     }
 }

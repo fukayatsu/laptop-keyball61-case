@@ -1,11 +1,13 @@
 // v4 サイドプレート: キーボード搭載部+パームレスト+中央張り出しの一体2mm平板。
 // 完全な平面でベッドにベタ置き印刷(サポート不要)。フェンス等の立体はなし。
 // 組立時は 外側エッジが接地・内側が7°持ち上がる(テント角は中央箱の屋根が作る)。
+// キーボードは直接ではなく別体のボトムプレート(v4_bottom_plate.scad)に固定し、
+// それをこのプレートの上に重ねてM3でネジ止めする(2層4mmの積層で剛性UP・
+// キーボードをボトムプレートごと着脱できる)。このプレートにはキーボードの
+// M2/ボールケースネジの頭の逃げ穴と、ボトムプレート・上部カバーの取付穴を開ける。
 //
 // ローカル座標 = 斜面沿いの実寸(sx = kbローカルx / cos(tent), sy = kbローカルy)。
 // 外形はキーボード矩形とパーム矩形のhull(角丸矩形同士なので輪郭は自動的に滑らか)。
-// ボール部品の張り出し帯(実機知見)は貫通欠き取り——テントで浮くので
-// プレート下にはみ出しても接地しない。
 include <v4_params.scad>
 
 v4p_ox = kb_wall / cos(tent_angle);   // 外形(アクリル座標)の配置オフセット
@@ -58,34 +60,25 @@ module v4_plate_left() {
             translate([16, 119, v4_pt - 0.01]) cube([3, 3, 3.02]);      // 東脚
         }
 
-        // キーボード取付穴
-        translate([v4p_ox, v4p_oy, 0]) {
+        // キーボードのネジ頭(ボトムプレート下面に出る)の逃げ穴。
+        // 下からドライバーも通るので、キーボード単体の着脱もこのまま可能
+        translate([v4p_ox, v4p_oy, 0])
             for (h = plate_holes_f) {
                 if (h[2] > 1.9 && h[2] < 2.35)   // M2
-                    translate([h[0], h[1], -1]) cylinder(d = m2_hole_d, h = 20);
+                    translate([h[0], h[1], -1]) cylinder(d = v4_m2_head_clr, h = 20);
                 if (h[2] >= 2.35 && h[2] < 4)    // ボールケースネジ
-                    translate([h[0], h[1], -1]) cylinder(d = bc_hole_d, h = 20);
+                    translate([h[0], h[1], -1]) cylinder(d = v4_bc_head_clr, h = 20);
                 if (h[2] > 10)                   // ボール取出し穴
                     translate([h[0], h[1], -1]) cylinder(d = h[2], h = 20);
             }
-            // ボール張り出し帯の貫通欠き取り(v4_ball_relief=true時のみ。既定は埋める)
-            if (v4_ball_relief)
-                translate([0, 0, -1]) linear_extrude(20) difference() {
-                    translate([40, -kb_wall - 1])
-                        square([(149.49 - kb_wall) / cos(tent_angle) - 40, 47 + kb_wall + 1]);
-                    plate2d(0.5);
-                }
-        }
+
+        // ボトムプレート・上部カバーの取付穴(下からM3x8なべ)
+        for (p = concat(v4_bp_ears, v4tc_cols))
+            translate([p[0], p[1], -1]) cylinder(d = m3_hole_d, h = 20);
 
         // 中央ジョイント穴(縦M3なべ用ストレート穴, 屋根フランジのネジ軸位置)
         for (jy = v4_cj_ys)
             translate([v4sx(kbw + 6), v4_jyl(jy), -1]) cylinder(d = 3.4, h = 20);
-
-        // TRSケーブル通し穴(10x18角丸, TRRSジャックの真東)。
-        // 外形東縁sx139.8とスパイン西縁sx156の間の帯: プラグごと表から裏へ通し、
-        // 裏でカバーのTRSノッチへ導く。ジョイント穴(162.2, jyl170=56.5)とは干渉しない
-        hull() for (sy = [61, 84])   // 北へ15mm延長(プラグの取り回し用, 実機知見)
-            translate([147.6, sy, -1]) cylinder(d = 10, h = v4_pt + 2);
 
         // ケーブルまとめ用スロット(3x15, 角丸):
         // 親指キー付近の2つのM2穴(sx126.9/134.8)のちょうど真北(ユーザー指定)。
