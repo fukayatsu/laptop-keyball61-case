@@ -138,6 +138,31 @@ def main():
         hits = int(cbg.contains(pts[ina]).sum()) if ina.any() else 0
         check(f"カバー⇔スパイン: {hits}/40000", hits == 0)
 
+    lo = np.maximum(cvg.bounds[0], plg.bounds[0])
+    hi = np.minimum(cvg.bounds[1], plg.bounds[1])
+    if np.all(hi > lo):
+        pts = rng.uniform(lo, hi, (40000, 3))
+        ina = cvg.contains(pts)
+        hits = int(plg.contains(pts[ina]).sum()) if ina.any() else 0
+        check(f"カバー⇔プレート: {hits}/40000", hits == 0)
+
+    print("[5] カバー(プレート下に張り出し)")
+    # 平面視でカバー外周がすべてプレート(左右どちらか)の下に収まる。
+    # プレート外形は凸なので凸包で判定(TRS穴・スロット等の貫通穴を無視するため)
+    vs = cvg.vertices[np.abs(cvg.vertices[:, 2] - (1.0 + 1.2)) < 0.01]  # 面取り上端=外形
+    up = np.tile([0, 0, 1.0], (len(vs), 1))
+    under = (plg.convex_hull.ray.intersects_any(vs, up)
+             | prg.convex_hull.ray.intersects_any(vs, up)
+             | (np.abs(vs[:, 0]) < 0.6))  # 中心線の突き合わせ隙間
+    check(f"カバー外周がプレートの下に収まる: {int((~under).sum())}/{len(vs)}点はみ出し",
+          under.all())
+    # Touch ID基板85x31x3が床の上に置ける(縦置き x-38..-7, y126..211, 余裕0.5)
+    gx, gy, gz = np.meshgrid(np.linspace(-38.5, -6.5, 17), np.linspace(125.5, 211.5, 44),
+                             [3.3, 6.5])
+    pts = np.column_stack([gx.ravel(), gy.ravel(), gz.ravel()])
+    hits = int(cvg.contains(pts).sum()) + int(cbg.contains(pts).sum())
+    check(f"Touch ID基板85x31の空間: 干渉{hits}点", hits == 0)
+
     print()
     if FAILS:
         print(f"NG {len(FAILS)}件:")
