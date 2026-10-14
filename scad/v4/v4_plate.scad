@@ -15,11 +15,22 @@ v4p_oy = kb_wall;
 function v4sx(x) = x / cos(tent_angle);
 
 module v4_plate_fp2d() {
-    hull() {
-        rounded_rect(v4sx(kbw + v4_ovl), kbd, 6);
-        translate([v4sx(palm_x0), -(palm_d - palm_overlap)])
-            rounded_rect(v4sx(palm_w), palm_d, palm_r);
+    intersection() {
+        hull() {
+            rounded_rect(v4sx(kbw + v4_ovl), kbd, 6);
+            translate([v4sx(palm_x0), -(palm_d - palm_overlap)])
+                rounded_rect(v4sx(palm_w), palm_d, palm_r);
+        }
+        v4_plate_mid_clip2d();
     }
+}
+
+// グローバルの x <= -v4_mid_clr (中心線の左側)をプレート座標へ逆変換した半平面。
+// 奥端で張り出しが中心線を越える分を切り、右プレートと稜線で突き合わせる
+module v4_plate_mid_clip2d() {
+    scale([1 / cos(tent_angle), 1])
+        translate([kbw, kbd]) rotate(splay) translate([v4_corner_x, -kb_corner_y])
+            translate([-2000 - v4_mid_clr, -1000]) square(2000);
 }
 
 module v4_plate_left() {

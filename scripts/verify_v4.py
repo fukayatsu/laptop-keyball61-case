@@ -15,7 +15,7 @@ import trimesh
 PLATE_W, PLATE_D = 142.99, 113.53
 KBW, KBD = PLATE_W + 12, PLATE_D + 12
 SPLAY, TENT = 10.0, 7.0
-V4_CORNER = (20.0, 238.0)
+V4_CORNER = (10.0, 238.0)
 CJ_YS = [120, 170, 220]
 PT, FIT, SPINE_Z0 = 2.0, 0.15, 13.5
 
@@ -106,7 +106,7 @@ def main():
     print("[3.5] カバー取付ネジ(軸素通し+スパイン下穴)")
     cvg = cv.copy()
     cvg.apply_transform(tr([0, 0, 1.0]))  # 印刷並進を戻す
-    for sx, sy in [[-24, 120], [24, 120], [-10, 218], [10, 218]]:
+    for sx, sy in [[-12, 120], [12, 120], [0, 200]]:
         zs = np.arange(2.0, 18.3, 0.4)
         axis = np.column_stack([np.full_like(zs, sx), np.full_like(zs, sy), zs])
         clear = cvg.contains(axis).sum() == 0 and cbg.contains(axis).sum() == 0
@@ -125,6 +125,11 @@ def main():
     ina = plg.contains(pts)
     hits = int(cbg.contains(pts[ina]).sum()) if ina.any() else 0
     check(f"プレート⇔スパイン: {hits}/40000", hits == 0)
+    prg = pr.copy()
+    prg.apply_transform(trimesh.transformations.reflection_matrix([0, 0, 0], [1, 0, 0])
+                        @ place_left() @ rot(-TENT, [0, 1, 0]) @ trimesh.transformations.reflection_matrix([0, 0, 0], [1, 0, 0]))
+    gap = prg.bounds[0][0] - plg.bounds[1][0]
+    check(f"左右プレート間の隙間(中心線): {round(gap,2)}mm (>0)", gap > 0)
     lo = np.maximum(cvg.bounds[0], cbg.bounds[0])
     hi = np.minimum(cvg.bounds[1], cbg.bounds[1])
     if np.all(hi > lo):
@@ -132,6 +137,31 @@ def main():
         ina = cvg.contains(pts)
         hits = int(cbg.contains(pts[ina]).sum()) if ina.any() else 0
         check(f"カバー⇔スパイン: {hits}/40000", hits == 0)
+
+    lo = np.maximum(cvg.bounds[0], plg.bounds[0])
+    hi = np.minimum(cvg.bounds[1], plg.bounds[1])
+    if np.all(hi > lo):
+        pts = rng.uniform(lo, hi, (40000, 3))
+        ina = cvg.contains(pts)
+        hits = int(plg.contains(pts[ina]).sum()) if ina.any() else 0
+        check(f"カバー⇔プレート: {hits}/40000", hits == 0)
+
+    print("[5] カバー(プレート下に張り出し)")
+    # 平面視でカバー外周がすべてプレート(左右どちらか)の下に収まる。
+    # プレート外形は凸なので凸包で判定(TRS穴・スロット等の貫通穴を無視するため)
+    vs = cvg.vertices[np.abs(cvg.vertices[:, 2] - (1.0 + 1.2)) < 0.01]  # 面取り上端=外形
+    up = np.tile([0, 0, 1.0], (len(vs), 1))
+    under = (plg.convex_hull.ray.intersects_any(vs, up)
+             | prg.convex_hull.ray.intersects_any(vs, up)
+             | (np.abs(vs[:, 0]) < 0.6))  # 中心線の突き合わせ隙間
+    check(f"カバー外周がプレートの下に収まる: {int((~under).sum())}/{len(vs)}点はみ出し",
+          under.all())
+    # Touch ID基板85x31x3が床の上に置ける(縦置き x-38..-7, y126..211, 余裕0.5)
+    gx, gy, gz = np.meshgrid(np.linspace(-38.5, -6.5, 17), np.linspace(125.5, 211.5, 44),
+                             [3.3, 6.5])
+    pts = np.column_stack([gx.ravel(), gy.ravel(), gz.ravel()])
+    hits = int(cvg.contains(pts).sum()) + int(cbg.contains(pts).sum())
+    check(f"Touch ID基板85x31の空間: 干渉{hits}点", hits == 0)
 
     print()
     if FAILS:
