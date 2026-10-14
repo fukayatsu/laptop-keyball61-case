@@ -15,7 +15,7 @@ import trimesh
 PLATE_W, PLATE_D = 142.99, 113.53
 KBW, KBD = PLATE_W + 12, PLATE_D + 12
 SPLAY, TENT = 10.0, 7.0
-V4_CORNER = (20.0, 238.0)
+V4_CORNER = (10.0, 238.0)
 CJ_YS = [120, 170, 220]
 PT, FIT, SPINE_Z0 = 2.0, 0.15, 13.5
 
@@ -106,7 +106,7 @@ def main():
     print("[3.5] カバー取付ネジ(軸素通し+スパイン下穴)")
     cvg = cv.copy()
     cvg.apply_transform(tr([0, 0, 1.0]))  # 印刷並進を戻す
-    for sx, sy in [[-24, 120], [24, 120], [-10, 218], [10, 218]]:
+    for sx, sy in [[-12, 120], [12, 120], [0, 200]]:
         zs = np.arange(2.0, 18.3, 0.4)
         axis = np.column_stack([np.full_like(zs, sx), np.full_like(zs, sy), zs])
         clear = cvg.contains(axis).sum() == 0 and cbg.contains(axis).sum() == 0
@@ -125,6 +125,11 @@ def main():
     ina = plg.contains(pts)
     hits = int(cbg.contains(pts[ina]).sum()) if ina.any() else 0
     check(f"プレート⇔スパイン: {hits}/40000", hits == 0)
+    prg = pr.copy()
+    prg.apply_transform(trimesh.transformations.reflection_matrix([0, 0, 0], [1, 0, 0])
+                        @ place_left() @ rot(-TENT, [0, 1, 0]) @ trimesh.transformations.reflection_matrix([0, 0, 0], [1, 0, 0]))
+    gap = prg.bounds[0][0] - plg.bounds[1][0]
+    check(f"左右プレート間の隙間(中心線): {round(gap,2)}mm (>0)", gap > 0)
     lo = np.maximum(cvg.bounds[0], cbg.bounds[0])
     hi = np.minimum(cvg.bounds[1], cbg.bounds[1])
     if np.all(hi > lo):
