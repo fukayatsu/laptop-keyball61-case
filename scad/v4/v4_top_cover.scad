@@ -2,11 +2,12 @@
 // 中にTouch ID基板(85x31, バッテリーなし)とTRSケーブル(L型プラグごと)を収める。
 //  - 天面は水平。壁の下端は左右プレート上面(切妻)に沿う
 //  - 取付: 左右プレートのKB外形〜縫い目の帯(sx140..156, 蝶番部)に柱を3本/側。
-//    柱は全て天板まで通し、天板の座ぐりからM3x25なべ→左右プレートの下でナット。
+//    柱は全て天板まで通し、天板の座ぐりからM3x25なべ→左右プレート→スパイン底面の
+//    六角ポケットのナット。カバー・左右プレート・スパインを同じネジで共締めする(2026-10-15)。
 //    横挿しスロットは傾けるとナットが滑り出て組めず、ナット圧入は保持力が心もとなく、
-//    インサートは部品・工具が増えるので、ナットを手で押さえられるプレート下に出した(2026-10-15)
-//    左右のプレートを橋渡しするので中央のたわみも抑える
-//    (旧スパイン接続帯の横リブsy31/98の役目を引き継ぐ)
+//    インサートは部品・工具が増えるので、カバーの外(スパインの下)にナットを出した。
+//    スパインがKB外形〜縫い目の帯まで広がって蝶番部を下から支え、
+//    カバーは左右プレートを橋渡しする(旧スパイン接続帯の横リブsy31/98の役目)
 //  - 柱は西壁と天板の高さまで一体のリブ(幅=柱径9)でつながる
 //  - ブリッジなし: 座ぐりの座面は55°の円錐(なべ頭は外周で座る)。USB-C窓は下辺を45°に尖らせる
 //  - 西壁(左右)にTRSプラグの切欠き、ボトムプレートの耳の逃げ。北壁にUSB-Cの窓
@@ -19,8 +20,9 @@ use <v4_bottom_plate.scad>
 module v4tc_half2d() {
     intersection() {
         v4_place_plate_left2d() polygon([
-            [v4tc_x0, v4tc_y0], [v4tc_x0, v4tc_nw[1]], [v4tc_nw[0], v4tc_y1],
-            [400, v4tc_y1], [400, v4tc_y0]
+            [v4tc_xs, v4tc_ys0], v4tc_sw[0], v4tc_sw[1],
+            [v4tc_x0, v4tc_nw[1]], [v4tc_nw[0], v4tc_y1],
+            [400, v4tc_y1], [400, v4tc_ys0]
         ]);
         translate([-1000, -1000]) square([1000, 3000]);
     }
@@ -41,17 +43,58 @@ module v4tc_above_gable() {
 }
 
 module v4tc_envelope() {
-    intersection() {
-        translate([0, 0, -50]) linear_extrude(v4tc_top_z + 50) v4tc_fp2d();
-        v4tc_above_gable();
+    difference() {
+        intersection() {
+            translate([0, 0, -50]) linear_extrude(v4tc_top_z + 50) v4tc_fp2d();
+            v4tc_above_gable();
+        }
+        if (v4tc_cham > 0) v4tc_cham_cut();
     }
 }
 
-// 取付ネジ: 天板の座ぐりからM3x25なべ、左右プレートの下でナット(プレート座標z=プレート下面から)
+// 南区間の天面の縁の45°面取り(南壁・西壁・斜めの壁)。伏せ印刷で45°の張り出しになる。
+// 外形が凹(親指の逃げ)なので、辺ごとに45°のくさびで切り、隣の辺とは角の二等分線で分ける
+function v4p2g(p) = let (x = p[0] * cos(tent_angle) - kbw, y = p[1] - kbd)
+    [-v4_corner_x + x * cos(splay) + y * sin(splay), kb_corner_y - x * sin(splay) + y * cos(splay)];
+function v4u(v) = v / norm(v);
+function v4n(p, q) = let (d = v4u(q - p)) [-d[1], d[0]];   // 時計回りに辿る辺の外向き法線(進行方向の左)
+
+module v4tc_cham_cut(dz = 0) {   // dz: 面を下げる量(空洞側は板厚 x √2)
+    c = v4tc_cham;
+    v1 = v4p2g([v4tc_xs, v4tc_ys0]); v2 = v4p2g(v4tc_sw[0]); v3 = v4p2g(v4tc_sw[1]);
+    s1 = v4p2g([300, v4tc_ys0]);
+    c0 = v1 + (s1 - v1) * (-v1[0] / (s1[0] - v1[0]));       // 南壁と中心線の交点
+    n0 = v4n(c0, v1); n1 = v4n(v1, v2); n2 = v4n(v2, v3);
+    b = v4u(n1 + n2);                                         // 凹角v2の二等分線
+    for (m = [0, 1]) mirror([m, 0, 0]) {
+        // 凸角だけでつながる辺(南壁)は無限平面のまま
+        v4tc_cham_plane(c0, n0, c + dz);
+        // 凹角v2を挟む2辺は二等分線で領域を分ける
+        intersection() { v4tc_cham_plane(v1, n1, c + dz); v4tc_halfplane(v2, b, v1); }
+        intersection() { v4tc_cham_plane(v2, n2, c + dz); v4tc_halfplane(v2, b, v3); }
+    }
+}
+// 外面の線(点p, 外向き法線n)から天面までcの45°面より上
+module v4tc_cham_plane(p, n, c) {
+    translate([p[0], p[1], v4tc_top_z - c]) rotate([0, 0, atan2(n[1], n[0])])
+        rotate([0, -45, 0]) translate([0, -500, -500]) cube(1000);
+}
+// 点pを通る方向dの直線で分けた、点sを含む側
+module v4tc_halfplane(p, d, s) {
+    side = sign(d[0] * (s[1] - p[1]) - d[1] * (s[0] - p[0]));
+    k = [-d[1], d[0]] * side;
+    translate([0, 0, -100]) linear_extrude(400)
+        polygon([p - d * 500, p + d * 500, p + d * 500 + k * 500, p - d * 500 + k * 500]);
+}
+
+// 空洞から除く(=面取りに沿って板厚を残す)部分: 面取り面を板厚分だけ内側へ平行移動した面より上
+module v4tc_cham_keep_inner() { v4tc_cham_cut(v4tc_t * sqrt(2)); }
+
+// 取付ネジ: 天板の座ぐりからM3x25なべ、スパイン底面のポケットのナット
+// (プレート座標z=プレート下面から。ナットの上面 = -(v4_fit + v4_sp_meat))
 v4tc_screw_l = 25;
-v4tc_seat_z  = v4tc_screw_l - 2.4 - 1.2;
-                     // 頭の座面 = ネジ長 - ナット厚2.4 - 先端の余裕1.2 → 21.4。
-                     // 頭の上面23.8は天面(軸で24.3, 低い側の頭の縁で約23.9)の下に収まる
+v4tc_seat_z  = v4tc_screw_l - (v4_fit + v4_sp_meat + 2.4) - 1.2;
+                     // 頭の座面 = ネジ長 - ナット下面の深さ4.55 - 先端の余裕1.2 → 19.25
 v4tc_head_d  = 5.5;  // なべ頭の径
 v4tc_cb_d    = 6.5;  // 座ぐり径(なべ頭 + 1)
 v4tc_cb_cone = 55;   // 座面の円錐角(水平から)。伏せ印刷で座ぐりの奥が張り出しになるため平座にしない。
@@ -83,8 +126,12 @@ module v4_top_cover() {
         union() {
             difference() {
                 v4tc_envelope();
-                translate([0, 0, -60]) linear_extrude(v4tc_top_z - v4tc_t + 60)
-                    offset(delta = -v4tc_t) v4tc_fp2d();
+                difference() {
+                    translate([0, 0, -60]) linear_extrude(v4tc_top_z - v4tc_t + 60)
+                        offset(delta = -v4tc_t) v4tc_fp2d();
+                    // 面取り部も板厚を保つ
+                    if (v4tc_cham > 0) v4tc_cham_keep_inner();
+                }
             }
             // 柱は壁・天板に0.5食い込む所まで(外面と共面にしない=縮退面防止)
             intersection() {
