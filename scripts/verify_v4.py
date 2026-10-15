@@ -26,7 +26,7 @@ PT, FIT, SPINE_Z0 = 2.0, 0.15, 13.5
 BP_T, BP_BOSS_H = 2.0, 6.2
 BP_EARS = [[40, 113], [110, 119.5], [34, 8.5], [118, 8.5], [146, 47], [146, 100]]
 TC_COLS = [[149.5, 35], [149.5, 80], [149.5, 113]]
-TC_INS_D, TC_INS_L, TC_INS_LEN = 4.0, 6.0, 5.0   # 下穴径・深さ / インサート長
+TC_SCREW_L, TC_SEAT_Z = 25.0, 21.4   # 天板からのM3なべの長さ / 頭の座面(プレート座標z)
 TC_JACK_Y, TC_JACK_H, TC_PLUG_D = 64.7, 11.0, 11.0
 TID = (31.0, 85.0, 3.0)
 TID_Y0 = 146.0
@@ -210,22 +210,36 @@ def main():
               f"先端がボス内={tip <= PT + BP_BOSS_H}, {msg_h}",
               clear and ring_plate and floor and nut_void and wall and tip_ok and ok_h)
 
-    print("[5] 上部カバーの取付ネジ (左側, 左右プレートの下からM3x8なべ→柱下端の熱圧入インサート)")
+    print("[5] 上部カバーの取付ネジ (左側, 天板の座ぐりからM3x25なべ→左右プレートの下でナット)")
     for sx, sy in TC_COLS:
-        zs = np.arange(-0.5, PT + 7.0, 0.25)
-        axis = pf([[sx, sy, z] for z in zs])
+        # 軸: プレート下面から座面まで素通し
+        axis = pf([[sx, sy, z] for z in np.arange(-0.5, TC_SEAT_Z, 0.25)])
         clear = plg.contains(axis).sum() == 0 and tcg.contains(axis).sum() == 0
         ring_plate = all(plg.contains(pf(circle_pts(sx, sy, 2.6, 1.0))))
-        # 下穴: 内側が空洞、外に肉厚1.5以上の壁、奥に天井
-        hole = not any(tcg.contains(pf(circle_pts(sx, sy, TC_INS_D / 2 - 0.1, PT + TC_INS_L / 2))))
-        wall = all(tcg.contains(pf(circle_pts(sx, sy, TC_INS_D / 2 + 1.5,
-                                              PT + TC_INS_L / 2))))
-        ceil = all(tcg.contains(pf(circle_pts(sx, sy, 2.5, PT + TC_INS_L + 0.5))))
-        engage = min(M3_LEN - PT, TC_INS_LEN)          # ネジがインサートに掛かる長さ
-        ok_h, msg_h = head_checks("", sx, sy)
-        check(f"({sx},{sy}): 軸素通し={clear}, プレート穴周囲={ring_plate}, 下穴空洞={hole}, "
-              f"下穴壁={wall}, 下穴天井={ceil}, 掛かり={round(engage,1)}mm, {msg_h}",
-              clear and ring_plate and hole and wall and ceil and engage >= 4 and ok_h)
+        # 柱が天板まで中実(ネジ穴の外側)
+        col = all(tcg.contains(pf([p for z in np.arange(PT + 0.5, TC_SEAT_Z - 1, 1.0)
+                                   for p in circle_pts(sx, sy, 3.2, z)])))
+        # 頭: 座面より上の頭の体積が空洞で、頭の上面が天面より下(出っ張らない)
+        head = pf([p for z in (TC_SEAT_Z + 0.3, TC_SEAT_Z + M3_HEAD_H - 0.1)
+                   for p in circle_pts(sx, sy, M3_HEAD_D / 2 - 0.1, z) + [[sx, sy, z]]])
+        head_void = not any(tcg.contains(head))
+        head_top = float(pf(circle_pts(sx, sy, M3_HEAD_D / 2, TC_SEAT_Z + M3_HEAD_H))[:, 2].max())
+        flush = head_top <= top_z + 0.05
+        # 座面: 頭の外周の直下に材料がある
+        seat = all(tcg.contains(pf(circle_pts(sx, sy, M3_HEAD_D / 2 - 0.2, TC_SEAT_Z - 0.3))))
+        # ナット(プレート下面に座る)と先端: スパインに当たらず接地より上、先端の余裕
+        tip = TC_SEAT_Z - TC_SCREW_L
+        margin = -NUT_T - tip
+        nut = pf([p for z in (-0.3, -NUT_T, tip) for p in
+                  circle_pts(sx, sy, 5.5 / math.sqrt(3) + 0.3, z, 12) + [[sx, sy, z]]])
+        nut_hit = int(cbg.contains(nut).sum())
+        nut_zmin = float(nut[:, 2].min())
+        check(f"({sx},{sy}): 軸素通し={clear}, プレート穴周囲={ring_plate}, 柱中実={col}, "
+              f"座ぐり空洞={head_void}, 座面={seat}, 頭が天面以下={flush}"
+              f"({round(head_top - top_z, 2)}), 先端余裕={round(margin, 1)}mm, "
+              f"ナット⇔スパイン干渉={nut_hit}, ナット/先端の最下点z={round(nut_zmin, 1)}",
+              clear and ring_plate and col and head_void and seat and flush
+              and margin >= 0.8 and nut_hit == 0 and nut_zmin > 1.0)
 
     print("[6] 干渉サンプリング")
     rng = np.random.default_rng(7)

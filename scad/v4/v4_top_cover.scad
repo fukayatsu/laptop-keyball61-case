@@ -2,13 +2,13 @@
 // 中にTouch ID基板(85x31, バッテリーなし)とTRSケーブル(L型プラグごと)を収める。
 //  - 天面は水平。壁の下端は左右プレート上面(切妻)に沿う
 //  - 取付: 左右プレートのKB外形〜縫い目の帯(sx140..156, 蝶番部)に柱を3本/側。
-//    左右プレートの下からM3x8なべ→柱の下端に埋めたM3熱圧入インサート。
-//    横挿しスロットは傾けるとナットが滑り出て組めず、ナット圧入は保持力が心もとないので
-//    インサートにした(2026-10-15)。はんだごてで柱の下端から埋める
+//    柱は全て天板まで通し、天板の座ぐりからM3x25なべ→左右プレートの下でナット。
+//    横挿しスロットは傾けるとナットが滑り出て組めず、ナット圧入は保持力が心もとなく、
+//    インサートは部品・工具が増えるので、ナットを手で押さえられるプレート下に出した(2026-10-15)
 //    左右のプレートを橋渡しするので中央のたわみも抑える
 //    (旧スパイン接続帯の横リブsy31/98の役目を引き継ぐ)
-//  - 柱の上端は壁に向かって約50°の斜面(伏せ印刷でサポート不要・基板の下を通す)
-//  - ブリッジなし: インサートの下穴は伏せ印刷で上に開く。USB-C窓は下辺を45°に尖らせる
+//  - 柱は西壁と天板の高さまで一体のリブ(幅=柱径9)でつながる
+//  - ブリッジなし: 座ぐりの座面は55°の円錐(なべ頭は外周で座る)。USB-C窓は下辺を45°に尖らせる
 //  - 西壁(左右)にTRSプラグの切欠き、ボトムプレートの耳の逃げ。北壁にUSB-Cの窓
 //  - Touch ID基板は天板の裏に両面テープで貼る(四隅にL字の位置決め枠)
 // 印刷: 天面をベッドに伏せて(parts_v4_top_cover.scad)。切欠き・逃げは上に開くのでサポート不要
@@ -47,24 +47,23 @@ module v4tc_envelope() {
     }
 }
 
-v4tc_col_h  = 8;     // 柱の円筒部(プレート上面から)
-v4tc_ins_d  = 4.0;   // M3熱圧入インサート(外径4.5 x 長さ5)の下穴径
-v4tc_ins_l  = 6;     // 同・深さ(プレート上面から)。インサート長+1で押し出された樹脂の逃げ。
-                     // M3x8の先端はプレート上面+6なので、インサート全長5mmにネジが掛かる
+// 取付ネジ: 天板の座ぐりからM3x25なべ、左右プレートの下でナット(プレート座標z=プレート下面から)
+v4tc_screw_l = 25;
+v4tc_seat_z  = v4tc_screw_l - 2.4 - 1.2;
+                     // 頭の座面 = ネジ長 - ナット厚2.4 - 先端の余裕1.2 → 21.4。
+                     // 頭の上面23.8は天面(軸で24.3, 低い側の頭の縁で約23.9)の下に収まる
+v4tc_head_d  = 5.5;  // なべ頭の径
+v4tc_cb_d    = 6.5;  // 座ぐり径(なべ頭 + 1)
+v4tc_cb_cone = 55;   // 座面の円錐角(水平から)。伏せ印刷で座ぐりの奥が張り出しになるため平座にしない。
+                     // テント7°が加わっても48°に収まる
 
 module v4tc_columns() {
+    // 柱(天板まで)と西壁を天板の高さまで一体のリブでつなぐ(v4_top_cover側で壁・天板の内側に切る)。
+    // 斜面だけだと柱・斜面・天板の間に閉じた空洞ができた
     for (m = [0, 1]) mirror([m, 0, 0]) v4_place_plate_left()
-        for (c = v4tc_cols) {
-            hull() {
-                translate([c[0], c[1], v4_pt]) cylinder(d = v4tc_col_d, h = v4tc_col_h);
-                // 壁側の斜面: 柱の内側の縁から壁まで約50°で立ち上げる
-                translate([v4tc_x0, c[1] - v4tc_col_d / 2, v4_pt])
-                    cube([v4tc_t, v4tc_col_d,
-                          v4tc_col_h + 1.3 * (c[0] + v4tc_col_d / 2 - v4tc_x0 - v4tc_t)]);
-            }
-            // 天板まで延長する柱(上端はv4tc_envelopeで天面に切られる)
-            if (len(search(c[1], v4tc_full_cols)) > 0)
-                translate([c[0], c[1], v4_pt]) cylinder(d = v4tc_col_d, h = 100);
+        for (c = v4tc_cols) hull() {
+            translate([c[0], c[1], v4_pt]) cylinder(d = v4tc_col_d, h = 100);
+            translate([v4tc_x0, c[1] - v4tc_col_d / 2, v4_pt]) cube([v4tc_t, v4tc_col_d, 100]);
         }
 }
 
@@ -87,9 +86,12 @@ module v4_top_cover() {
                 translate([0, 0, -60]) linear_extrude(v4tc_top_z - v4tc_t + 60)
                     offset(delta = -v4tc_t) v4tc_fp2d();
             }
+            // 柱は壁・天板に0.5食い込む所まで(外面と共面にしない=縮退面防止)
             intersection() {
                 v4tc_columns();
                 v4tc_envelope();
+                translate([0, 0, -60]) linear_extrude(v4tc_top_z - v4tc_t + 0.5 + 60)
+                    offset(delta = -v4tc_t + 0.5) v4tc_fp2d();
             }
             v4tc_tid_frame();
         }
@@ -104,12 +106,16 @@ module v4_top_cover() {
                 if (e[0] + v4_bp_ear_d / 2 + 0.6 > v4tc_x0 && e[1] > v4tc_y0 - 5)
                     translate([0, 0, -1]) linear_extrude(v4_pt + v4_bp_boss_h + 1 + 1)
                         offset(r = 0.6) v4_bp_ear2d(e);
-            // 柱: Φ3.4ネジ穴 + 下端のインサート下穴(口元に0.5の45°面取り=位置合わせ用)
+            // 柱: Φ3.4ネジ穴(天板まで貫通) + 天板の座ぐり(座面は円錐。なべ頭の外周が
+            // 円錐の径5.5の位置=v4tc_seat_zに座る)
             for (c = v4tc_cols) translate([c[0], c[1], 0]) {
-                translate([0, 0, -1]) cylinder(d = m3_hole_d, h = v4_pt + v4tc_col_h - 0.5 + 1);
-                translate([0, 0, -1]) cylinder(d = v4tc_ins_d, h = v4_pt + v4tc_ins_l + 1);
-                translate([0, 0, v4_pt - 0.5])
-                    cylinder(d1 = v4tc_ins_d + 2, d2 = v4tc_ins_d, h = 1);
+                translate([0, 0, -1]) cylinder(d = m3_hole_d, h = 100);
+                let (k = tan(v4tc_cb_cone),
+                     zc = v4tc_seat_z + (v4tc_cb_d - v4tc_head_d) / 2 * k,  // 円錐の上端
+                     hc = (v4tc_cb_d - m3_hole_d) / 2 * k) {
+                    translate([0, 0, zc]) cylinder(d = v4tc_cb_d, h = 100);
+                    translate([0, 0, zc - hc]) cylinder(d1 = m3_hole_d, d2 = v4tc_cb_d, h = hc + 0.01);
+                }
             }
         }
 
