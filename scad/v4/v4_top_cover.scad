@@ -2,13 +2,13 @@
 // 中にTouch ID基板(85x31, バッテリーなし)とTRSケーブル(L型プラグごと)を収める。
 //  - 天面は水平。壁の下端は左右プレート上面(切妻)に沿う
 //  - 取付: 左右プレートのKB外形〜縫い目の帯(sx140..156, 蝶番部)に柱を3本/側。
-//    左右プレートの下からM3x8なべ→柱の下端の六角ポケット(プレート側に開く・圧入)。
-//    横挿しスロットは傾けるとナットが滑り出て組めなかったので廃止(2026-10-15)。
-//    ポケットはカバーを伏せた状態でナットを押し込み、載せればプレートが蓋になる
+//    左右プレートの下からM3x8なべ→柱の下端に埋めたM3熱圧入インサート。
+//    横挿しスロットは傾けるとナットが滑り出て組めず、ナット圧入は保持力が心もとないので
+//    インサートにした(2026-10-15)。はんだごてで柱の下端から埋める
 //    左右のプレートを橋渡しするので中央のたわみも抑える
 //    (旧スパイン接続帯の横リブsy31/98の役目を引き継ぐ)
 //  - 柱の上端は壁に向かって約50°の斜面(伏せ印刷でサポート不要・基板の下を通す)
-//  - ブリッジなし: ナットポケットは伏せ印刷で上に開く。USB-C窓は下辺を45°に尖らせる
+//  - ブリッジなし: インサートの下穴は伏せ印刷で上に開く。USB-C窓は下辺を45°に尖らせる
 //  - 西壁(左右)にTRSプラグの切欠き、ボトムプレートの耳の逃げ。北壁にUSB-Cの窓
 //  - Touch ID基板は天板の裏に両面テープで貼る(四隅にL字の位置決め枠)
 // 印刷: 天面をベッドに伏せて(parts_v4_top_cover.scad)。切欠き・逃げは上に開くのでサポート不要
@@ -48,18 +48,23 @@ module v4tc_envelope() {
 }
 
 v4tc_col_h  = 8;     // 柱の円筒部(プレート上面から)
-v4tc_nut_d  = 2.6;   // ナットポケットの深さ(プレート上面から。ナット2.4が収まる)
-                     // ナット上面=プレート下面+4.6 → M3x8の掛かり余裕3.4mm
-v4tc_nut_af = 5.6;   // 同・対辺。M3ナット5.5に圧入(緩ければ5.5へ、入らなければ5.7へ)
+v4tc_ins_d  = 4.0;   // M3熱圧入インサート(外径4.5 x 長さ5)の下穴径
+v4tc_ins_l  = 6;     // 同・深さ(プレート上面から)。インサート長+1で押し出された樹脂の逃げ。
+                     // M3x8の先端はプレート上面+6なので、インサート全長5mmにネジが掛かる
 
 module v4tc_columns() {
     for (m = [0, 1]) mirror([m, 0, 0]) v4_place_plate_left()
-        for (c = v4tc_cols) hull() {
-            translate([c[0], c[1], v4_pt]) cylinder(d = v4tc_col_d, h = v4tc_col_h);
-            // 壁側の斜面: 柱の内側の縁から壁まで約50°で立ち上げる
-            translate([v4tc_x0, c[1] - v4tc_col_d / 2, v4_pt])
-                cube([v4tc_t, v4tc_col_d,
-                      v4tc_col_h + 1.3 * (c[0] + v4tc_col_d / 2 - v4tc_x0 - v4tc_t)]);
+        for (c = v4tc_cols) {
+            hull() {
+                translate([c[0], c[1], v4_pt]) cylinder(d = v4tc_col_d, h = v4tc_col_h);
+                // 壁側の斜面: 柱の内側の縁から壁まで約50°で立ち上げる
+                translate([v4tc_x0, c[1] - v4tc_col_d / 2, v4_pt])
+                    cube([v4tc_t, v4tc_col_d,
+                          v4tc_col_h + 1.3 * (c[0] + v4tc_col_d / 2 - v4tc_x0 - v4tc_t)]);
+            }
+            // 天板まで延長する柱(上端はv4tc_envelopeで天面に切られる)
+            if (len(search(c[1], v4tc_full_cols)) > 0)
+                translate([c[0], c[1], v4_pt]) cylinder(d = v4tc_col_d, h = 100);
         }
 }
 
@@ -99,14 +104,12 @@ module v4_top_cover() {
                 if (e[0] + v4_bp_ear_d / 2 + 0.6 > v4tc_x0 && e[1] > v4tc_y0 - 5)
                     translate([0, 0, -1]) linear_extrude(v4_pt + v4_bp_boss_h + 1 + 1)
                         offset(r = 0.6) v4_bp_ear2d(e);
-            // 柱: Φ3.4ネジ穴 + 下端の六角ナットポケット(口元に0.4の45°面取り)
+            // 柱: Φ3.4ネジ穴 + 下端のインサート下穴(口元に0.5の45°面取り=位置合わせ用)
             for (c = v4tc_cols) translate([c[0], c[1], 0]) {
                 translate([0, 0, -1]) cylinder(d = m3_hole_d, h = v4_pt + v4tc_col_h - 0.5 + 1);
-                translate([0, 0, -1])
-                    cylinder(d = v4tc_nut_af / cos(30), h = v4_pt + v4tc_nut_d + 1, $fn = 6);
-                translate([0, 0, v4_pt - 0.6])
-                    cylinder(d1 = (v4tc_nut_af + 2) / cos(30), d2 = v4tc_nut_af / cos(30),
-                             h = 1, $fn = 6);
+                translate([0, 0, -1]) cylinder(d = v4tc_ins_d, h = v4_pt + v4tc_ins_l + 1);
+                translate([0, 0, v4_pt - 0.5])
+                    cylinder(d1 = v4tc_ins_d + 2, d2 = v4tc_ins_d, h = 1);
             }
         }
 

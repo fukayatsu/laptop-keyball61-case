@@ -26,7 +26,7 @@ PT, FIT, SPINE_Z0 = 2.0, 0.15, 13.5
 BP_T, BP_BOSS_H = 2.0, 6.2
 BP_EARS = [[40, 113], [110, 119.5], [34, 8.5], [118, 8.5], [146, 47], [146, 100]]
 TC_COLS = [[149.5, 35], [149.5, 80], [149.5, 113]]
-TC_NUT_D, TC_NUT_AF = 2.6, 5.6
+TC_INS_D, TC_INS_L, TC_INS_LEN = 4.0, 6.0, 5.0   # 下穴径・深さ / インサート長
 TC_JACK_Y, TC_JACK_H, TC_PLUG_D = 64.7, 11.0, 11.0
 TID = (31.0, 85.0, 3.0)
 TID_Y0 = 146.0
@@ -210,25 +210,22 @@ def main():
               f"先端がボス内={tip <= PT + BP_BOSS_H}, {msg_h}",
               clear and ring_plate and floor and nut_void and wall and tip_ok and ok_h)
 
-    print("[5] 上部カバーの取付ネジ (左側, 左右プレートの下からM3x8なべ→柱下端の圧入ナット)")
+    print("[5] 上部カバーの取付ネジ (左側, 左右プレートの下からM3x8なべ→柱下端の熱圧入インサート)")
     for sx, sy in TC_COLS:
         zs = np.arange(-0.5, PT + 7.0, 0.25)
         axis = pf([[sx, sy, z] for z in zs])
         clear = plg.contains(axis).sum() == 0 and tcg.contains(axis).sum() == 0
         ring_plate = all(plg.contains(pf(circle_pts(sx, sy, 2.6, 1.0))))
-        # ポケット: ナット外接円(対辺/cos30)の内側が空洞、その外に壁、上に天井
-        rn = TC_NUT_AF / 2 - 0.1
-        pocket = not any(tcg.contains(pf(circle_pts(sx, sy, rn, PT + TC_NUT_D / 2))))
-        wall = all(tcg.contains(pf(circle_pts(sx, sy, TC_NUT_AF / np.sqrt(3) + 0.5,
-                                               PT + TC_NUT_D / 2))))
-        ceil = all(tcg.contains(pf(circle_pts(sx, sy, 2.5, PT + TC_NUT_D + 0.5))))
-        nut_top = PT + TC_NUT_D
-        tip_ok = M3_LEN - nut_top >= 0.8
+        # 下穴: 内側が空洞、外に肉厚1.5以上の壁、奥に天井
+        hole = not any(tcg.contains(pf(circle_pts(sx, sy, TC_INS_D / 2 - 0.1, PT + TC_INS_L / 2))))
+        wall = all(tcg.contains(pf(circle_pts(sx, sy, TC_INS_D / 2 + 1.5,
+                                              PT + TC_INS_L / 2))))
+        ceil = all(tcg.contains(pf(circle_pts(sx, sy, 2.5, PT + TC_INS_L + 0.5))))
+        engage = min(M3_LEN - PT, TC_INS_LEN)          # ネジがインサートに掛かる長さ
         ok_h, msg_h = head_checks("", sx, sy)
-        check(f"({sx},{sy}): 軸素通し={clear}, プレート穴周囲={ring_plate}, ポケット空洞={pocket}, "
-              f"ポケット壁={wall}, ポケット天井={ceil}, "
-              f"掛かり余裕={round(M3_LEN-nut_top,2)}mm, {msg_h}",
-              clear and ring_plate and pocket and wall and ceil and tip_ok and ok_h)
+        check(f"({sx},{sy}): 軸素通し={clear}, プレート穴周囲={ring_plate}, 下穴空洞={hole}, "
+              f"下穴壁={wall}, 下穴天井={ceil}, 掛かり={round(engage,1)}mm, {msg_h}",
+              clear and ring_plate and hole and wall and ceil and engage >= 4 and ok_h)
 
     print("[6] 干渉サンプリング")
     rng = np.random.default_rng(7)
