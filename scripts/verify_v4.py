@@ -26,7 +26,7 @@ PT, FIT, SPINE_Z0 = 2.0, 0.15, 13.5
 BP_T, BP_BOSS_H = 2.0, 6.2
 BP_EARS = [[40, 113], [110, 119.5], [34, 8.5], [118, 8.5], [146, 47], [146, 100]]
 TC_COLS = [[149.5, 35], [149.5, 80], [149.5, 113]]
-TC_SLOT_Z, TC_SLOT_H = 2.5, 2.7
+TC_SCREW_L, TC_SEAT_Z = 25.0, 21.4   # 天板からのM3なべの長さ / 頭の座面(プレート座標z)
 TC_JACK_Y, TC_JACK_H, TC_PLUG_D = 64.7, 11.0, 11.0
 TID = (31.0, 85.0, 3.0)
 TID_Y0 = 146.0
@@ -166,23 +166,23 @@ def main():
     fn, fz = cb.face_normals, cb.triangles_center[:, 2]
     over_area = cb.area_faces[(fn[:, 2] < -0.75) & (fz > 0.5)].sum() / 100
     check(f"スパイン: 41°超の下向き面 {round(over_area,2)}cm2 (< 2cm2)", over_area < 2)
-    # 上部カバー(伏せ): 許容は横挿しナットスロット床の中央(台形の天端, 3.4mm幅・約17mm2)x6のみ。
-    # USB-C窓は下辺を45°に尖らせてブリッジなし
+    # 上部カバー(伏せ): ナットポケットは上に開き、USB-C窓は下辺を45°に尖らせてブリッジなし
     fn, fz = tc.face_normals, tc.triangles_center[:, 2]
     over = (fn[:, 2] < -0.75) & (fz > 0.5)
     over_area = tc.area_faces[over].sum() / 100
     check(f"上部カバー: 41°超の下向き面 {round(over_area,2)}cm2 (< 1.5cm2)", over_area < 1.5)
     # 個々のブリッジ幅: 下向き面の連結成分ごとに、向きを合わせた外接矩形の短辺と
-    # 平均幅(面積/長辺)の小さい方(スロットは10°回転しているので軸平行の外接矩形は不可)
-    sub = tc.submesh([np.where(over)[0]], append=True)
+    # 平均幅(面積/長辺)の小さい方(部品は10°回転しているので軸平行の外接矩形は不可)
     spans = []
-    for p in sub.split(only_watertight=False):
+    parts = (tc.submesh([np.where(over)[0]], append=True).split(only_watertight=False)
+             if over.any() else [])
+    for p in parts:
         if p.area < 0.5:
             continue
         _, ext = trimesh.bounds.oriented_bounds_2D(p.vertices[:, :2])
         spans.append(min(min(ext), p.area / max(ext)))
-    check(f"上部カバー: 最大ブリッジ幅 {round(max(spans), 1)}mm (<= 4mm, {len(spans)}箇所)",
-          max(spans) <= 4)
+    check(f"上部カバー: 最大ブリッジ幅 {round(max(spans, default=0), 1)}mm (<= 4mm, {len(spans)}箇所)",
+          max(spans, default=0) <= 4)
 
     def head_checks(label, sx, sy):
         """下から入れるM3なべの頭: スパインに当たらず、接地(z=0)より上にあること"""
@@ -210,23 +210,36 @@ def main():
               f"先端がボス内={tip <= PT + BP_BOSS_H}, {msg_h}",
               clear and ring_plate and floor and nut_void and wall and tip_ok and ok_h)
 
-    print("[5] 上部カバーの取付ネジ (左側, 左右プレートの下からM3x8なべ→横挿しナット)")
+    print("[5] 上部カバーの取付ネジ (左側, 天板の座ぐりからM3x25なべ→左右プレートの下でナット)")
     for sx, sy in TC_COLS:
-        zs = np.arange(-0.5, PT + 7.0, 0.25)
-        axis = pf([[sx, sy, z] for z in zs])
+        # 軸: プレート下面から座面まで素通し
+        axis = pf([[sx, sy, z] for z in np.arange(-0.5, TC_SEAT_Z, 0.25)])
         clear = plg.contains(axis).sum() == 0 and tcg.contains(axis).sum() == 0
         ring_plate = all(plg.contains(pf(circle_pts(sx, sy, 2.6, 1.0))))
-        zslot = PT + TC_SLOT_Z + TC_SLOT_H / 2
-        floor = all(tcg.contains(pf(circle_pts(sx, sy, 2.5, PT + 1.0))))
-        slot_void = not any(tcg.contains(pf([[sx + dx, sy, zslot] for dx in (-2, 0, 2, 5, 8)])))
-        ceil = all(tcg.contains(pf(circle_pts(sx, sy, 2.5, PT + TC_SLOT_Z + TC_SLOT_H + 1.0))))
-        nut_top = PT + TC_SLOT_Z + NUT_T
-        tip_ok = M3_LEN - nut_top >= 0.8
-        ok_h, msg_h = head_checks("", sx, sy)
-        check(f"({sx},{sy}): 軸素通し={clear}, プレート穴周囲={ring_plate}, スロット床={floor}, "
-              f"スロット空洞={slot_void}, スロット天井={ceil}, "
-              f"掛かり余裕={round(M3_LEN-nut_top,2)}mm, {msg_h}",
-              clear and ring_plate and floor and slot_void and ceil and tip_ok and ok_h)
+        # 柱が天板まで中実(ネジ穴の外側)
+        col = all(tcg.contains(pf([p for z in np.arange(PT + 0.5, TC_SEAT_Z - 1, 1.0)
+                                   for p in circle_pts(sx, sy, 3.2, z)])))
+        # 頭: 座面より上の頭の体積が空洞で、頭の上面が天面より下(出っ張らない)
+        head = pf([p for z in (TC_SEAT_Z + 0.3, TC_SEAT_Z + M3_HEAD_H - 0.1)
+                   for p in circle_pts(sx, sy, M3_HEAD_D / 2 - 0.1, z) + [[sx, sy, z]]])
+        head_void = not any(tcg.contains(head))
+        head_top = float(pf(circle_pts(sx, sy, M3_HEAD_D / 2, TC_SEAT_Z + M3_HEAD_H))[:, 2].max())
+        flush = head_top <= top_z + 0.05
+        # 座面: 頭の外周の直下に材料がある
+        seat = all(tcg.contains(pf(circle_pts(sx, sy, M3_HEAD_D / 2 - 0.2, TC_SEAT_Z - 0.3))))
+        # ナット(プレート下面に座る)と先端: スパインに当たらず接地より上、先端の余裕
+        tip = TC_SEAT_Z - TC_SCREW_L
+        margin = -NUT_T - tip
+        nut = pf([p for z in (-0.3, -NUT_T, tip) for p in
+                  circle_pts(sx, sy, 5.5 / math.sqrt(3) + 0.3, z, 12) + [[sx, sy, z]]])
+        nut_hit = int(cbg.contains(nut).sum())
+        nut_zmin = float(nut[:, 2].min())
+        check(f"({sx},{sy}): 軸素通し={clear}, プレート穴周囲={ring_plate}, 柱中実={col}, "
+              f"座ぐり空洞={head_void}, 座面={seat}, 頭が天面以下={flush}"
+              f"({round(head_top - top_z, 2)}), 先端余裕={round(margin, 1)}mm, "
+              f"ナット⇔スパイン干渉={nut_hit}, ナット/先端の最下点z={round(nut_zmin, 1)}",
+              clear and ring_plate and col and head_void and seat and flush
+              and margin >= 0.8 and nut_hit == 0 and nut_zmin > 1.0)
 
     print("[6] 干渉サンプリング")
     rng = np.random.default_rng(7)
